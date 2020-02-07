@@ -4,8 +4,13 @@ require(`dotenv`).config({
 
 module.exports = {
   siteMetadata: {
-    siteTitleAlt: `hobbsco.de`,
-    siteTitle: `hobbsco.de`
+    siteTitle: `hobbsco.de`,
+    siteTitleAlt: `hobbsco.de | Hobbs Code`,
+    siteHeadline: `Thoughts on Programming`,
+    siteUrl: `https://hobbsco.de`,
+    siteLanguage: `en`,
+    siteDescription: `On Programming.`,
+    author: "@adrien_hobbs"
   },
   plugins: [
     {
