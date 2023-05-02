@@ -2,13 +2,13 @@
 
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'adrienhobbs.com',
+  title: 'hobbsco.de',
   author: 'Adrien Hobbs',
   headerTitle: '',
   description: 'writings on software development.',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://adrienhobbs.com',
+  siteUrl: 'https://hobbsco.de',
   siteRepo: '',
   siteLogo: '/static/images/logo.svg',
   image: '/static/images/me.jpg',
@@ -31,7 +31,8 @@ const siteMetadata = {
   newsletter: {
     // supports mailchimp, buttondown, convertkit, klaviyo, revue, emailoctopus
     // Please add your .env file and modify it according to your selection
-    provider: 'buttondown',
+    // provider: 'buttondown',
+    provider: null,
   },
   comments: {
     // If you want to use an analytics provider you have to add it to the
