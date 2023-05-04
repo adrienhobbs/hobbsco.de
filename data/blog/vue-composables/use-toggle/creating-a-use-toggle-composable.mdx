@@ -112,7 +112,7 @@ Awesome, almost there! All I'm doing here is pushing our callbacks into the rele
 
 Vue makes it really simple to watch updates on our `booleanValue` variable. We'll use the `watchEffect` hook from the Reactivity Api. WatchEffect accepts a function to call whenever one of its dependencies changes. Read more about it [here](https://vuejs.org/api/reactivity-core.html#watcheffect).
 
-Our goal here is to watch for changes on our `booleanValue` variable, and trigger the relevant callback upon these changes. Let's create a `triggerCallbacks` function to handle triggering callbacks.
+Our goal here is to watch for changes on our `booleanValue` variable, and trigger the correct callbacks upon these changes. Let's create a `triggerCallbacks` function to handle triggering callbacks.
 
 #### TriggerCallbacks
 
