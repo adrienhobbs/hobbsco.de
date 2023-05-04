@@ -1,0 +1,223 @@
+---
+title: Building an Event Driven useToggle Composable With Vue and TypeScript
+date: 2023-04-07T15:32:14Z
+lastmod: '2023-04-11'
+tags: ['vue.js', 'composables', 'utility']
+draft: false
+summary: How often have you needed to trigger a side-effect when a simple Boolean value is changed? In Vue, this is simply achieved, but can get a bit verbose. Let's abstract this design pattern into a composable for easy reuse, and learn some things on the way!
+layout: PostSimple
+---
+
+## Overview
+
+I've recently noticed a recurring design pattern in my projects. It's a simple one, however extremely useful. A `Boolean` value changes, and the UI needs to reflect that change. Not a very challenging problem to solve, sure. But what happens when you find yourself repeating this design pattern multiple times throughout an app. Maybe even within the same component. I'll abstract away this tedious and repetitive code, and build a composable to make managing boolean values and their corresponding event listeners as simple as calling a function.
+
+<TOCInline asDisclosure toc={props.toc} exclude="Overview" toHeading={2} />
+
+import PageTitle from './components/PageTitle.tsx'
+
+## Our Requirements
+
+Let's first state the intention of this composable so it's crystal clear what we're building.
+
+> Our composable should return an API that allows us toggle a Boolean value, subscribe to a Boolean values' changes, and have certain callbacks triggered when this Boolean value changes. It should also allow us to specify whether we want to listen to updates in perpetuity, or only the first time the Boolean updates. This is helpful when we only want to know when a boolean changes from `false` to `true`.
+
+Ok that's a start. So maybe our composable will return an Array (which allows us to rename these values later on with destructuring) with the following values: `return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]`
+
+Let's get started.
+
+## Scaffolding Our Composable
+
+Okay, let's start by scaffolding our `useToggle` composable.
+
+```typescript showLineNumbers
+// useToggle.ts
+import { ref, watchEffect, onUnmounted, type Ref } from 'vue'
+
+type Callback = (...args: any[]) => void
+type Callable = (...args: any[]) => Function
+
+interface Subscription {
+  callback: Callback
+  once: boolean
+}
+
+export default function useToggle(
+  initialValue: boolean
+): [Callable, Callable, () => void, Ref<boolean>] {
+  const booleanValue = ref(initialValue)
+  const callbacksTrue: Subscription[] = []
+  const callbacksFalse: Subscription[] = []
+
+  const register = (callbacksArray: Subscription[], callback: Callback, once = false) => {}
+
+  const registerTrueCallback = (callback: Callback, options = { once: false }) => {}
+
+  const registerFalseCallback = (callback: Callback, options = { once: false }) => {}
+
+  const toggleBooleanValue = () => {
+    booleanValue.value = !booleanValue.value
+  }
+
+  return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]
+}
+```
+
+So our only input here is `initialValue`: our starting Boolean value, with its default value set to false. Notice how we declare `booleanValue` as a ref (line 15) with its value set to our initialValue input. This will allow us to reactively watch changes on `booleanValue`.
+
+I've declared two arrays to store subscriptions for each of our event types (16-17) . I then scaffold the functions needed to register callbacks for our subscriptions (19-23). Both of these functions will accept a callback, and an options object that declares whether the callback should fire only once. Our register function (19) will control adding subscriptions to the correct callbacks array while our registerTrueCallback and registerFalseCallback functions will be our public functions to subscribe to events.
+
+Nice. We have our inputs and outputs ready to go. Let's start build the logic for our register functions.
+
+## Create The Register Function Logic
+
+Let's break down our functions to simplify building.
+
+#### Register
+
+- Push our subscriptions onto the correct callbacks array.
+- Return a function that will `unsubscribe` a callback from events.
+
+#### RegisterTrueCallback and RegisterFalseCallback Functions
+
+- Accept a callback and options, and call the subscribe function with the correct callbacks to push our subscription onto.
+
+Sounds easy enough right?
+
+```javascript showLineNumbers
+const register = (callbacks: Subscription[], callback: Callback, once = false) => {
+  const subscription = { callback, once }
+  callbacks.push(subscription)
+
+  return () => {
+    const index = callbacks.indexOf(subscription)
+    if (index !== -1) {
+      callbacks.splice(index, 1)
+    }
+  }
+}
+
+const registerTrueCallback = (callback: Callback, options = { once: false }) => {
+  return subscribe(callbacksTrue, callback, options.once)
+}
+
+const registerFalseCallback = (callback: Callback, options = { once: false }) => {
+  return subscribe(callbacksFalse, callback, options.once)
+}
+```
+
+Awesome, almost there! All I'm doing here is pushing our callbacks into the relevant callbacks array. Our register function also returns a handy function that will allow it's callers to unsubscribe from events. Next up, watching reactive changes on our `booleanValue` variable, so we can trigger the correct callbacks!
+
+## Watching Reactive Changes and Triggering Our Callbacks
+
+Vue makes it really simple to watch updates on our `booleanValue` variable. We'll use the `watchEffect` hook from the Reactivity Api. WatchEffect accepts a function to call whenever one of its dependencies changes. Read more about it [here](https://vuejs.org/api/reactivity-core.html#watcheffect).
+
+Our goal here is to watch for changes on our `booleanValue` variable, and trigger the relevant callback upon these changes. Let's create a `triggerCallbacks` function to handle triggering callbacks.
+
+#### TriggerCallbacks
+
+- Given a true/false value, loop through the correct callbacks array, and trigger each callback.
+- If a callback should only be run once, remove the callback from the array to prevent the callback from being called again.
+
+```js
+const triggerCallbacks = (value: boolean, callbacks: Subscription[]) => {
+  callbacks.forEach((subscription) => {
+    subscription.callback(value)
+    if (subscription.once) {
+      const index = callbacks.indexOf(subscription)
+      if (index !== -1) {
+        callbacks.splice(index, 1)
+      }
+    }
+  })
+}
+```
+
+Awesome! Now I only need to watch for changes on the `booleanValue` variable and call this `triggerCallbacks` function. I'll check the value of `booleanValue` to set which callbacks array we'll be triggering. I'll also use the `unmounted` hook to cleanup our callback arrays when a component gets unmounted.
+
+```javascript
+watchEffect(() => {
+  const callbacks = booleanValue.value ? callbacksTrue : callbacksFalse
+  triggerCallbacks(booleanValue.value, callbacks)
+})
+
+unMounted(() => {
+  callbacksTrue.length = 0
+  callbacksFalse.length = 0
+})
+```
+
+## The Completed Composable
+
+That ought to do it! Here's the entire composable.
+
+```javascript
+import { ref, watchEffect, onUnmounted, type Ref } from 'vue'
+
+type Callback = (...args: any[]) => void
+type Callable = (...args: any[]) => Function
+
+interface Subscription {
+  callback: Callback
+  once: boolean
+}
+
+export default function useToggle(
+  initialValue: boolean = false
+): [Callable, Callable, () => void, Ref<boolean>] {
+  const booleanValue = ref(initialValue)
+  const callbacksTrue: Subscription[] = []
+  const callbacksFalse: Subscription[] = []
+
+  const register = (callbacks: Subscription[], callback: Callback, once = false) => {
+    const subscription = { callback, once }
+    callbacks.push(subscription)
+
+    return () => {
+      const index = callbacks.indexOf(subscription)
+      if (index !== -1) {
+        callbacks.splice(index, 1)
+      }
+    }
+  }
+
+  const registerTrueCallback = (callback: Callback, options = { once: false }) => {
+    return register(callbacksTrue, callback, options.once)
+  }
+
+  const registerFalseCallback = (callback: Callback, options = { once: false }) => {
+    return register(callbacksFalse, callback, options.once)
+  }
+
+  const toggleBooleanValue = () => {
+    booleanValue.value = !booleanValue.value
+  }
+
+  const triggerCallbacks = (value: boolean, callbacks: Subscription[]) => {
+    callbacks.forEach((subscription) => {
+      subscription.callback(value)
+      if (subscription.once) {
+        const index = callbacks.indexOf(subscription)
+        if (index !== -1) {
+          callbacks.splice(index, 1)
+        }
+      }
+    })
+  }
+
+  watchEffect(() => {
+    const callbacks = booleanValue.value ? callbacksTrue : callbacksFalse
+    triggerCallbacks(booleanValue.value, callbacks)
+  })
+
+  onUnmounted(() => {
+    callbacksTrue.length = 0
+    callbacksFalse.length = 0
+  })
+
+  return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]
+}
+
+```
+
+In an upcoming post, we'll put this composable to work. Stay tuned!

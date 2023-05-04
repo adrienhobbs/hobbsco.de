@@ -1,0 +1,182 @@
+---
+title: Testing and Implementing Our UseToggle Composable
+date: 2023-04-09T17:52:14Z
+lastmod: '2023-04-11'
+tags: ['vue.js', 'composables', 'utility']
+draft: false
+summary: In a previous post, I built an event driven useToggle composable with Vue and TypeScript. Now I'll set up some unit tests, and use it in the real world. Join me!
+layout: PostSimple
+---
+
+## Overview
+
+In a <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a>, we built a `useToggle` composable using Vue.js and TypeScript. Let's put it to good use and build something useful! Before that however, I'll make sure this composable is fully tested by creating a few unit tests with `vitest` and `vue-test-utils`.
+
+If you're not familiar with [Vitest](https://vitest.dev/), it's a 'Blazing Fast Unit Test Framework' powered by Vite. I'll also use the [vue-test-utils](https://test-utils.vuejs.org/) testing suite utilities to handle the testing functions.
+
+<TOCInline asDisclosure toc={props.toc} exclude="Overview" toHeading={2} />
+
+## What Are We Testing?
+
+So what exactly are we testing here? If you read the <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a> you'll know that our useToggle composable has the following functionality:
+
+- toggles a boolean value between true and false
+- allow subscriptions to boolean value changes.
+- execute a specific callback determined by the boolean value
+  - call this function when the boolean is true
+  - call this function when the boolean is false
+- specify whether a callback should be called once, or in perpetuity
+- unsubscribe a callback at any point in time.
+
+## Writing Unit Tests
+
+I'll start by creating a component that implements our `useToggle` composable, making sure we reset the components state before each test is run, by wrapping it inside a `beforeEach` method. I'll set up some state variables and methods to help track what events have been triggered. Then we'll test each of the previously listed features.
+
+```typescript:useToggle.spec.js showLineNumbers
+import { ref } from 'vue'
+import { test, expect, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { useToggle } from '../../composables/useToggle'
+
+beforeEach(async (context) => {
+  const Component = {
+    template: `
+      <div>
+        <button @click="toggle">Toggle</button>
+      </div>
+    `,
+    setup() {
+      const [onTrue, onFalse, toggle, booleanValue] = useToggle()
+      const triggeredOnTrue = ref(false)
+      const triggeredOnFalse = ref(false)
+      const triggeredOnceCount = ref(0)
+      const triggeredUnsubscribeCount = ref(0)
+
+      onTrue(() => {
+        triggeredOnTrue.value = true
+      })
+
+      onTrue(() => {
+        triggeredUnsubscribeCount.value++
+      })
+
+      onTrue(
+        () => {
+          triggeredOnceCount.value++
+        },
+        { once: true }
+      )
+
+      onFalse(() => {
+        triggeredOnFalse.value = true
+      })
+
+      return {
+        onTrue,
+        onFalse,
+        toggle,
+        booleanValue,
+        triggeredOnTrue,
+        triggeredOnFalse,
+        triggeredOnceCount,
+        triggeredUnsubscribeCount
+      }
+    }
+  }
+
+  context.wrapper = mount(Component)
+  context.toggleButton = context.wrapper.find('button')
+})
+
+test('booleanValue is correctly toggled', async ({ wrapper, toggleButton }) => {
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.booleanValue).toBeTruthy()
+
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.booleanValue).toBeFalsy()
+})
+
+test('onTrue callbacks are called', async ({ wrapper, toggleButton }) => {
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.triggeredOnTrue).toBe(true)
+})
+
+test('onFalse callbacks are called', async ({ wrapper, toggleButton }) => {
+  toggleButton.trigger('click')
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.triggeredOnFalse).toBe(true)
+})
+
+test('once callbacks are only called once', async ({ wrapper, toggleButton }) => {
+  toggleButton.trigger('click')
+  toggleButton.trigger('click')
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.triggeredOnceCount).toEqual(1)
+})
+
+test('subscriptions can unsubscribe from events.', async ({ wrapper, toggleButton }) => {
+  toggleButton.trigger('click')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.vm.triggeredUnsubscribeCount).toEqual(1)
+})
+```
+
+The tests all pass and I can sleep soundly knowing this composable will perform as expected.
+
+## Implementing the useToggle Composable
+
+There are tons of use-cases for this composable, but I'll pick a simple one for demonstration purposes. Let's implement a dark mode toggle for a website, using Tailwind CSS and our useToggle composable.
+
+Let's create a component that will implement our useToggle function to toggle between light and dark modes. [Tailwind CSS](https://tailwindcss.com/docs/dark-mode) simplifies the process by including a `dark` variant that can be used to style our app differently when we enable dark mode. For example, setting the classNames `dark:text-white text-black` will only display white text if dark mode is enabled. We can toggle dark mode by adding and removing the `dark` class on the HTML element.
+
+We'll call our useToggle component like this `const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggle()`. The main advantage of returning an Array here is that I can easily rename the functions and variables in a concise manner. There's no question what these functions and variables are, and quickly and accurately communicate their use to other developers.
+
+We have all the tools we need. Let's write a dark mode toggle in under 10 lines of code!
+
+```js
+<script setup lang="ts">
+import { useToggle } from '@/composables/useToggle'
+
+const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggle()
+
+onDarkMode(() => {
+  document.documentElement.classList.add('dark')
+})
+
+onLightMode(() => {
+  document.documentElement.classList.remove('dark')
+})
+</script>
+
+<template>
+  <main class="flex items-center justify-center">
+    <button
+      @click="toggleDarkMode"
+      type="button"
+      class="text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
+    >
+      Toggle {{ isDark ? 'Light' : 'Dark' }} Mode
+    </button>
+  </main>
+</template>
+
+```
+
+I hope this illustrates how powerful a design pattern like this can be. By abstracting away the complexity of state management and event handling, the useToggle composable makes it easier than ever to create dynamic, interactive web applications that respond to user input in a seamless and intuitive way.
+
+## More Uses For Our Composable
+
+Additionally, here a few more ideas on where this useToggle composable is the perfect choice.
+
+- Toggling the display of a sidebar or modal
+- Implementing a "show more" or "show less" feature for a list or text
+- Toggling between different view modes (e.g. grid vs. list)
+- Implementing a "read more" or "read less" feature for a long article or blog post
+- Toggling the visibility of a tooltip or popover
+- Implementing a "toggle switch" or "checkbox" component
+- Implementing a "like" or "favorite" feature for a piece of content
