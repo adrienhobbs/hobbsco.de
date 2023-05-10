@@ -1,6 +1,8 @@
 import '@/css/tailwind.css'
 import '@/css/prism.css'
 import 'katex/dist/katex.css'
+import { Analytics: VercelAnalytics } from '@vercel/analytics/react'
+
 // import '@/css/docsearch.css' // Uncomment if using algolia docsearch
 // import '@docsearch/css' // Uncomment if using algolia docsearch
 
@@ -15,6 +17,7 @@ import LayoutWrapper from '@/components/LayoutWrapper'
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
+    <>
     <ThemeProvider attribute="class" defaultTheme={siteMetadata.theme}>
       <Head>
         <meta content="width=device-width, initial-scale=1" name="viewport" />
@@ -26,5 +29,7 @@ export default function App({ Component, pageProps }: AppProps) {
         </SearchProvider>
       </LayoutWrapper>
     </ThemeProvider>
+    <VercelAnalytics />
+    </>
   )
 }
