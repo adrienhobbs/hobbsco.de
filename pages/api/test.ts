@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     method: 'POST',
   })
 
-  console.log(response)
+  const resp = await response.json()
 
-  res.status(201).json(response)
+  res.status(201).json(resp)
 }
