@@ -1,0 +1,266 @@
+---
+title: 'An Introduction To Recursion: Building a useRaf Composable With Vue.js.'
+date: 2023-04-21T15:32:14Z
+lastmod: '2023-04-21'
+tags: ['vue.js', 'composables', 'typescript', 'animation', 'requestAnimationFrame']
+draft: false
+summary: In this article, I'll review the concept of recursion, and build a Vue.js composable utilizing recursion and the requestAnimationFrame API. This composable will execute a callback function repeatedly for a specified duration, while allowing to pause, resume, and reset the function's execution at any point. By the end of this article, you'll have a better understanding of how recursion works, and a useRaf composable that will come in handy in a future article.
+---
+
+## Overview
+
+In this article, I'll review the concept of recursion, and build a Vue.js composable utilizing recursion and the requestAnimationFrame API. This composable will execute a callback function repeatedly for a specified duration, while allowing to pause, resume, and reset the function's execution at any point. By the end of this article, you'll have a better understanding of how recursion works, and a useRaf composable that will come in handy in a future article.
+
+<TOCInline asDisclosure toc={props.toc} exclude="Overview" toHeading={2} />
+
+## What Exactly is Recursion?
+
+Recursion involves a function calling itself, either directly or indirectly, until it reaches a specific condition. In general, recursion should be used when it simplifies the problem or leads to a more elegant and understandable solution. It should be avoided if it creates performance or memory issues.
+
+In [Mastering JavaScript Functional Programming](https://amzn.to/41qXbuv), the author defines recursion:
+
+> Recursion is the most potent tool for developing algorithms and a great aid for solving large classes of problems. The idea is that a function can at a certain point call itself, and when that call is done, continue working with whatever result it has received.
+
+## Structuring A Recursive Function
+
+So let's move on to a quick recursive example to help illustrate how to structure a recursive function. Every recursive function should have two parts. A _base case_, and a _recursive case_.
+
+### The Base Case
+
+Specifying a base case signals our function to stop recursing, otherwise it will call itself infinitely, attempting to run `FOR-EV-ER`.
+
+![Forever GIF](https://i.giphy.com/media/l4FB8FfpphPmxdTkA/giphy.webp)
+
+Below, the infiniteCountdown function doesn't have a `base case` and will result in an call stack error.
+
+![Recursion Example](/static/images/an-intro-to-recursion-use-raf/useCountdown.png)
+
+In the countdown function, the base case is on `line 8`: `if (count < 0) return`. Without the base case, this function would continue to countdown past zero, towards -infinity (in reality though, this function will just crash).
+
+### The Recursive Case
+
+The recursive case is on `line 10`: `countdown(count - 1)`. Execute any necessary logic here, and recursively call the function.
+In the countdown function we simply call the countdown function, passing it `count - 1` as a parameter. This will always be called until our base case is met.
+
+So now that you have a basic understanding of recursion, let's discuss how I'll integrate recursion into this useRaf composable with the requestAnimationFrame api.
+
+## Enter RequestAnimationFrame
+
+So let's talk about RequestAnimationFrame (RAF). RAF is a method provided by modern web browsers that allows for efficient and synchronized rendering of animations and visual effects. It provides a way to schedule animations and other visual effects in a way that works with the browser's rendering pipeline. This results in smoother, more efficient animations that are less likely to cause visual glitches or consume excessive system resources. Usually, the number of callbacks is approximately 60 times per second, but will generally match the display refresh rate in most web browsers as per the W3C recommendation. Read more about RAF on [MDN](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame).]
+
+Generally speaking, the role of RAF is to continuously run a specific callback, 60 times per second, continuously, or until a _base case_ is hit! A perfect example to learn about recursion. Let's move on.
+
+## Build Something Already!
+
+Okay okay, let's get the heart of this article. What am I building?
+
+> This useRAF composable will accept a callback function, a duration, and a flag determining if we should run the callback function immediately, or wait until the start function is called. It should return an API that allows for the starting, pausing, resuming, and resetting of the callback execution. Using the requestAnimationFrame it will run the callback for a specified duration, returning progress, timeElapsed, and timestamp variables.
+
+The intent of the composable will become more apparent in a future article, where I'll depend on this useRaf composable to create smooth and performant animations.
+
+So here's how I envision our callback being implemented: `const { pause, start, reset } = useRaf(cb, 5000, false)`.
+
+## The Code
+
+```typescript showLineNumbers
+import { onBeforeUnmount } from 'vue'
+interface CallbackArgs {
+  progress: number
+  timeElapsed: number
+  timestamp: DOMHighResTimeStamp
+}
+
+export function useRaf(callback: (args: CallbackArgs) => void, duration: number, immediate = true) {
+  let requestID: number | null
+  let progress: number | null
+  let previousTimestamp = 0
+  let totalDelta = 0
+  let isActive = false
+
+  function loop(timestamp: DOMHighResTimeStamp) {
+    if (!isActive) {
+      isActive = true
+      previousTimestamp = timestamp
+    }
+
+    totalDelta = totalDelta + timestamp - previousTimestamp
+
+    progress = totalDelta / duration
+
+    if (totalDelta > duration && requestID) {
+      cancelAnimationFrame(requestID)
+      requestID = null
+      isActive = false
+
+      return
+    }
+
+    callback({ timestamp, timeElapsed: totalDelta, progress: parseFloat(progress.toFixed(2)) })
+
+    previousTimestamp = timestamp
+    requestID = requestAnimationFrame(loop)
+  }
+
+  function start() {
+    if (isActive) return
+    requestID = requestAnimationFrame(loop)
+  }
+
+  function pause() {
+    if (requestID) {
+      cancelAnimationFrame(requestID)
+      isActive = false
+    }
+  }
+
+  function reset() {
+    if (requestID) {
+      cancelAnimationFrame(requestID)
+    }
+    isActive = false
+    progress = null
+    previousTimestamp = 0
+    totalDelta = 0
+    isActive = false
+    requestID = null
+
+    callback({ timestamp: 0, timeElapsed: 0, progress: 0 })
+  }
+
+  if (immediate) start()
+  onBeforeUnmount(reset)
+
+  return {
+    start,
+    pause,
+    reset,
+  }
+}
+```
+
+### Variable Declarations (lines 9-13)
+
+```typescript
+let requestID: number | null
+let progress: number | null
+let previousTimestamp = 0
+let totalDelta = 0
+let isActive = false
+```
+
+I'll start by declaring the following variables:
+
+- `requestID` is the ID returned by requestAnimationFrame.
+  - we persist this id so we can cancel the animation frame when pausing or resetting the execution of our callback.
+- `progress` is the current progress of the loop execution, represented as a floatng point number between 0-1.
+- `previousTimestamp` is the timestamp of the previous animation frame.
+  - we'll use this to calculate how much time has passed since the last execution.
+- `totalDelta` is the total time elapsed during the loop execution.
+  - this keeps track of the time elapsed since the first execution of our callback.
+- `isActive` is a flag to determine if the loop is currently active.
+
+### The Loop Function
+
+```typescript
+function loop(timestamp: DOMHighResTimeStamp) {
+  if (!isActive) {
+    isActive = true
+    previousTimestamp = timestamp
+  }
+
+  totalDelta = totalDelta + timestamp - previousTimestamp
+
+  progress = totalDelta / duration
+
+  if (totalDelta > duration && requestID) {
+    cancelAnimationFrame(requestID)
+    requestID = null
+    isActive = false
+
+    return
+  }
+
+  callback({ timestamp, timeElapsed: totalDelta, progress: parseFloat(progress.toFixed(2)) })
+
+  previousTimestamp = timestamp
+  requestID = requestAnimationFrame(loop)
+}
+```
+
+I'll begin the loop function by checking if our execution is already active. If not, we need to set our previousTimeStamp variable to the timestamp RAF is passing us. This will allow us to calculate the totalDelta correctly, which will evaluate to 0 on the first execution. Subsequent executions will update `previousTimeStamp` _AFTER_ our `totalDelta` has been calculated. If I always updated `previousTimeStamp` before the `totalDelta` calculation, the `totalDelta` would always evaluate to zero!
+
+It should be noted that I'm using `totalDelta` because the callback execution can be paused. Without pause functionality, I could simply check if `timeStamp - previousTimeStamp` is greater than the duration to determine if execution should stop. But since we can pause the playback, wait a few seconds, and continue execution, I wouldn't be able to calculate how much time the execution has been running for without keeping track of multiple timestamps. This seeme like unecessary complexity. Instead, tracking the actual running time of the execution provides a much easier way determine the state of the execution.
+
+> Only write as much code as is needed. Anything extra is complexity that will become a burden. <br/><br/> -- Pete Goodliffe in [Becoming a Better Programmer](https://amzn.to/41FSQ74)
+
+Next, if the duration of the execution has been surpassed, I'll cancel the next execution of the callback and end the function with a return statement.
+
+Finally, if still active, I'll execute the callback with the timestamp, timeElapsed, and progress data, update the previousTimeStamp to equal the currentTimeStamp so we can utilize it to calculate our totalDelta in the next execution, and update the requestId to our next requestAnimateFrame ID.
+
+### The Start, Pause, and Reset Functions
+
+```typescript
+function start() {
+  if (isActive) return
+  requestID = requestAnimationFrame(loop)
+}
+
+function pause() {
+  if (requestID) {
+    cancelAnimationFrame(requestID)
+    isActive = false
+  }
+}
+
+function reset() {
+  if (requestID) {
+    cancelAnimationFrame(requestID)
+  }
+  isActive = false
+  progress = null
+  previousTimestamp = 0
+  totalDelta = 0
+  isActive = false
+  requestID = null
+
+  callback({ timestamp: 0, timeElapsed: 0, progress: 0 })
+}
+```
+
+These are all relatively straightforward functions, so I won't go into much detail about them. Review them at your discretion!
+
+## Usage
+
+Sheesh! That was a lot of work! Let's put this to use, in a not so exciting demo. I'll showcase the functionality, by controlling our functions execution with start, pause, and reset buttons, while displaying the `currentProgress` and `timeRemaining` variables.
+
+```typescript
+const currentProgress = ref(0)
+const time = ref(0)
+
+const { pause, start, reset } = useRaf(
+  ({ progress, timeElapsed }) => {
+    currentProgress.value = progress
+    time.value = timeElapsed
+  },
+  3000,
+  false
+)
+```
+
+![Recursion Example](/static/images/an-intro-to-recursion-use-raf/demo.gif)
+
+## Additional Uses For Our Composable
+
+A few more ideas for how this composable can be utilized:
+
+- Measuring the performance of a particular function or algorithm by timing its execution using the timeElapsed argument.
+- Implementing a game loop or other real-time application by using useRaf to update the state of the application on each frame.
+- Implementing a progress bar or other UI element that tracks the progress of a long-running task by using useRaf to periodically update the UI based on the progress argument.
+- Implementing a countdown timer or other time-based UI element by using useRaf to update the UI based on the timeElapsed argument.
+- Implementing a scrolling or panning effect by using useRaf to update the position of the scroll or pan on each frame.
+
+## Thanks For Sticking Around!
+
+That was a lot to review in one sitting, so nice job getting to the end. If you enjoyed this article, consider signing up for my newsletter. I'll be releasing a new article soon, where I'll integrate this `useRaf` composable to create another composable for creating smooth animations!
+
+<BlogNewsletterForm title="Enjoyed this Article?" />
