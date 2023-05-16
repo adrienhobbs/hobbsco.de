@@ -8,13 +8,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const API_URL = 'https://api.convertkit.com/v3/'
   const data = { email, api_key: API_KEY }
 
-  const response = await fetch(`${API_URL}forms/${FORM_ID}/subscribe`, {
-    body: JSON.stringify(data),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  return res.status(201).json({ FORM_ID, API_KEY, API_URL, data })
 
-  return response
+  // const response = await fetch(`${API_URL}forms/${FORM_ID}/subscribe`, {
+  //   body: JSON.stringify(data),
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //   },
+  //   method: 'POST',
+  // })
+
+  // return response
 }
