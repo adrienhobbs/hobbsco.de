@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.status(200).json({ name: 'John Doe' })
   const { email } = req.body
   const FORM_ID = process.env.CONVERTKIT_FORM_ID
   const API_KEY = process.env.CONVERTKIT_API_KEY
