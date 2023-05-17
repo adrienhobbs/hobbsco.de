@@ -1,15 +1,15 @@
 ---
-title: Testing and Implementing Our UseToggle Composable
+title: Testing and Implementing Our useToggleEvents Composable
 date: 2023-04-09T17:52:14Z
 lastmod: '2023-04-11'
 tags: ['vue.js', 'composables', 'tailwindcss', 'vitest', 'unit-testing']
 draft: false
-summary: In a previous post, I built an event driven useToggle composable with Vue and TypeScript. Now I'll set up some unit tests, and use it in the real world. Join me!
+summary: In a previous post, I built an event driven useToggleEvents composable with Vue and TypeScript. Now I'll set up some unit tests, and use it in the real world. Join me!
 ---
 
 ## Overview
 
-In a <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a>, we built a `useToggle` composable using Vue.js and TypeScript. Let's put it to good use and build something useful! Before that however, I'll make sure this composable is fully tested by creating a few unit tests with `vitest` and `vue-test-utils`.
+In a <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a>, we built a `useToggleEvents` composable using Vue.js and TypeScript. Let's put it to good use and build something useful! Before that however, I'll make sure this composable is fully tested by creating a few unit tests with `vitest` and `vue-test-utils`.
 
 If you're not familiar with [Vitest](https://vitest.dev/), it's a 'Blazing Fast Unit Test Framework' powered by Vite. I'll also use the [vue-test-utils](https://test-utils.vuejs.org/) testing suite utilities to handle the testing functions.
 
@@ -17,7 +17,7 @@ If you're not familiar with [Vitest](https://vitest.dev/), it's a 'Blazing Fast 
 
 ## What Are We Testing?
 
-So what exactly are we testing here? If you read the <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a> you'll know that our useToggle composable has the following functionality:
+So what exactly are we testing here? If you read the <a href="/blog/vue-composables/use-toggle/creating-a-use-toggle-composable">previous post</a> you'll know that our useToggleEvents composable has the following functionality:
 
 - toggles a boolean value between true and false
 - allow subscriptions to boolean value changes.
@@ -27,13 +27,13 @@ So what exactly are we testing here? If you read the <a href="/blog/vue-composab
 
 ## Writing Unit Tests
 
-I'll start by creating a component that implements our `useToggle` composable, making sure we reset the components state before each test is run, by wrapping it inside a `beforeEach` method. I'll set up some state variables and methods to help track what events have been triggered. Then we'll test each of the previously listed features.
+I'll start by creating a component that implements our `useToggleEvents` composable, making sure we reset the components state before each test is run, by wrapping it inside a `beforeEach` method. I'll set up some state variables and methods to help track what events have been triggered. Then we'll test each of the previously listed features.
 
-```typescript:useToggle.spec.js showLineNumbers
+```typescript:useToggleEvents.spec.js showLineNumbers
 import { ref } from 'vue'
 import { test, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { useToggle } from '../../composables/useToggle'
+import { useToggleEvents } from '../../composables/useToggleEvents'
 
 beforeEach(async (context) => {
   const Component = {
@@ -43,7 +43,7 @@ beforeEach(async (context) => {
       </div>
     `,
     setup() {
-      const [onTrue, onFalse, toggle, booleanValue] = useToggle()
+      const [onTrue, onFalse, toggle, booleanValue] = useToggleEvents()
       const triggeredOnTrue = ref(false)
       const triggeredOnFalse = ref(false)
       const triggeredOnceCount = ref(0)
@@ -125,21 +125,21 @@ test('subscriptions can unsubscribe from events.', async ({ wrapper, toggleButto
 
 The tests all pass and I can sleep soundly knowing this composable will perform as expected.
 
-## Implementing the useToggle Composable
+## Implementing the useToggleEvents Composable
 
-There are tons of use-cases for this composable, but I'll pick a simple one for demonstration purposes. Let's implement a dark mode toggle for a website, using Tailwind CSS and our useToggle composable.
+There are tons of use-cases for this composable, but I'll pick a simple one for demonstration purposes. Let's implement a dark mode toggle for a website, using Tailwind CSS and our useToggleEvents composable.
 
-Let's create a component that will implement our useToggle function to toggle between light and dark modes. [Tailwind CSS](https://tailwindcss.com/docs/dark-mode) simplifies the process by including a `dark` variant that can be used to style our app differently when we enable dark mode. For example, setting the classNames `dark:text-white text-black` will only display white text if dark mode is enabled. We can toggle dark mode by adding and removing the `dark` class on the HTML element.
+Let's create a component that will implement our useToggleEvents function to toggle between light and dark modes. [Tailwind CSS](https://tailwindcss.com/docs/dark-mode) simplifies the process by including a `dark` variant that can be used to style our app differently when we enable dark mode. For example, setting the classNames `dark:text-white text-black` will only display white text if dark mode is enabled. We can toggle dark mode by adding and removing the `dark` class on the HTML element.
 
-We'll call our useToggle component like this `const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggle()`. The main advantage of returning an Array here is that I can easily rename the functions and variables in a concise manner. There's no question what these functions and variables are, and quickly and accurately communicate their use to other developers.
+We'll call our useToggleEvents component like this `const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggleEvents()`. The main advantage of returning an Array here is that I can easily rename the functions and variables in a concise manner. There's no question what these functions and variables are, and quickly and accurately communicate their use to other developers.
 
 We have all the tools we need. Let's write a dark mode toggle in under 10 lines of code!
 
 ```js
 <script setup lang="ts">
-import { useToggle } from '@/composables/useToggle'
+import { useToggleEvents } from '@/composables/useToggleEvents'
 
-const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggle()
+const [onDarkMode, onLightMode, toggleDarkMode, isDark] = useToggleEvents()
 
 onDarkMode(() => {
   document.documentElement.classList.add('dark')
@@ -164,11 +164,11 @@ onLightMode(() => {
 
 ```
 
-I hope this illustrates how powerful a design pattern like this can be. By abstracting away the complexity of state management and event handling, the useToggle composable makes it easier than ever to create dynamic, interactive web applications that respond to user input in a seamless and intuitive way.
+I hope this illustrates how powerful a design pattern like this can be. By abstracting away the complexity of state management and event handling, the useToggleEvents composable makes it easier than ever to create dynamic, interactive web applications that respond to user input in a seamless and intuitive way.
 
 ## More Uses For Our Composable
 
-Additionally, here a few more ideas on where this useToggle composable is the perfect choice.
+Additionally, here a few more ideas on where this useToggleEvents composable is the perfect choice.
 
 - Toggling the display of a sidebar or modal
 - Implementing a "show more" or "show less" feature for a list or text
@@ -178,6 +178,6 @@ Additionally, here a few more ideas on where this useToggle composable is the pe
 - Implementing a "toggle switch" or "checkbox" component
 - Implementing a "like" or "favorite" feature for a piece of content
 
-View the demo and documentation for this composable <a href="https://vue.hobbsco.de/composables/use-toggle-events/usetoggle-demo">here.</a>
+View the demo and documentation for this composable <a href="https://vue.hobbsco.de/composables/use-toggle-events/useToggleEvents-demo">here.</a>
 
 <BlogNewsletterForm title="Enjoyed this Article? Sign up for my newsletter already!" />

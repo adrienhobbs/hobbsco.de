@@ -1,5 +1,5 @@
 ---
-title: Building an Event Driven useToggle Composable With Vue and TypeScript
+title: Building an Event Driven useToggleEvents Composable With Vue and TypeScript
 date: 2023-04-07T15:32:14Z
 lastmod: '2023-04-11'
 tags: ['vue.js', 'composables', 'typescript']
@@ -28,10 +28,10 @@ Let's get started.
 
 ## Scaffolding Our Composable
 
-Okay, let's start by scaffolding our `useToggle` composable.
+Okay, let's start by scaffolding our `useToggleEvents` composable.
 
 ```typescript showLineNumbers
-// useToggle.ts
+// useToggleEvents.ts
 import { ref, watchEffect, onUnmounted, type Ref } from 'vue'
 
 type Callback = (...args: any[]) => void
@@ -42,7 +42,7 @@ interface Subscription {
   once: boolean
 }
 
-export default function useToggle(
+export default function useToggleEvents(
   initialValue: boolean
 ): [Callable, Callable, () => void, Ref<boolean>] {
   const booleanValue = ref(initialValue)
@@ -162,7 +162,7 @@ interface Subscription {
   once: boolean
 }
 
-export default function useToggle(
+export default function useToggleEvents(
   initialValue: boolean = false
 ): [Callable, Callable, () => void, Ref<boolean>] {
   const booleanValue = ref(initialValue)
@@ -222,6 +222,6 @@ export default function useToggle(
 
 In <a href="blog/vue-composables/use-toggle/creating-a-use-toggle-composable">this post</a>, I set up some unit tests and put this composable to work building a dark mode toggle. Check it out!
 
-View the demo and documentation for this composable <a href="https://vue.hobbsco.de/composables/use-toggle-events/usetoggle-demo">here.</a>
+View the demo and documentation for this composable <a href="https://vue.hobbsco.de/composables/use-toggle-events/useToggleEvents-demo">here.</a>
 
 <BlogNewsletterForm title="Enjoyed this Article? Sign up for my newsletter already!" />
