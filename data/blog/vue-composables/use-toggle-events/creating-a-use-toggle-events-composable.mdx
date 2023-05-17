@@ -18,9 +18,9 @@ import PageTitle from './components/PageTitle.tsx'
 
 ## Our Requirements
 
-Let's first state the intention of this composable so it's crystal clear what we're building.
+I'll first state the intention of this composable so it's crystal clear what I'm building.
 
-> Our composable should return an API that allows us toggle a Boolean value, subscribe to a Boolean values' changes, and have certain callbacks triggered when this Boolean value changes. It should also allow us to specify whether we want to listen to updates in perpetuity, or only the first time the Boolean updates. This is helpful when we only want to know when a boolean changes from `false` to `true`.
+> This composable should return an API that allows the toggling of a Boolean value, subscribe to a Boolean values' changes, and to have certain callbacks triggered when this Boolean value changes. It should also allow specification of if a callback should be notified of updates in perpetuity, or only the first time the Boolean updates. This is helpful when we only want to know when a boolean changes from `false` to `true`.
 
 Ok that's a start. So maybe our composable will return an Array (which allows us to rename these values later on with destructuring) with the following values: `return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]`
 
