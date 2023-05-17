@@ -16,19 +16,19 @@ I've recently noticed a recurring design pattern in my projects. It's a simple o
 
 import PageTitle from './components/PageTitle.tsx'
 
-## Our Requirements
+## The Requirements
 
 I'll first state the intention of this composable so it's crystal clear what I'm building.
 
 > This composable should return an API that allows the toggling of a Boolean value, subscribe to a Boolean values' changes, and to have certain callbacks triggered when this Boolean value changes. It should also allow specification of if a callback should be notified of updates in perpetuity, or only the first time the Boolean updates. This is helpful when we only want to know when a boolean changes from `false` to `true`.
 
-Ok that's a start. So maybe our composable will return an Array (which allows us to rename these values later on with destructuring) with the following values: `return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]`
+Ok that's a start. So maybe the composable will return an Array (which allows us to rename these values later on with destructuring) with the following values: `return [registerTrueCallback, registerFalseCallback, toggleBooleanValue, booleanValue]`
 
 Let's get started.
 
-## Scaffolding Our Composable
+## Scaffolding The Composable
 
-Okay, let's start by scaffolding our `useToggleEvents` composable.
+Okay, let's start by scaffolding the `useToggleEvents` composable.
 
 ```typescript showLineNumbers
 // useToggleEvents.ts
@@ -63,24 +63,24 @@ export default function useToggleEvents(
 }
 ```
 
-So our only input here is `initialValue`: our starting Boolean value, with its default value set to false. Notice how we declare `booleanValue` as a ref (line 15) with its value set to our initialValue input. This will allow us to reactively watch changes on `booleanValue`.
+So the only input here is `initialValue`: the starting Boolean value, with its default value set to false. Notice how I declare `booleanValue` as a ref (line 15) with its value set to the initialValue input. This will allow us to reactively watch changes on `booleanValue`.
 
-I've declared two arrays to store subscriptions for each of our event types (16-17) . I then scaffold the functions needed to register callbacks for our subscriptions (19-23). Both of these functions will accept a callback, and an options object that declares whether the callback should fire only once. Our register function (19) will control adding subscriptions to the correct callbacks array while our registerTrueCallback and registerFalseCallback functions will be our public functions to subscribe to events.
+I've declared two arrays to store subscriptions for each of the event types (16-17) . I then scaffold the functions needed to register callbacks for the subscriptions (19-23). Both of these functions will accept a callback, and an options object that declares whether the callback should fire only once. The register function (19) will control adding subscriptions to the correct callbacks array while the registerTrueCallback and registerFalseCallback functions will be the public functions to subscribe to events.
 
-Nice. We have our inputs and outputs ready to go. Let's build the logic for our register functions.
+Nice. The inputs and outputs are ready to go. Time to build the logic for the register functions.
 
 ## Create The Register Function Logic
 
-Let's break down our functions to simplify building.
+A break down of the functions to simplify building.
 
 #### Register
 
-- Push our subscriptions onto the correct callbacks array.
+- Push the subscriptions onto the correct callbacks array.
 - Return a function that will `unsubscribe` a callback from events.
 
 #### RegisterTrueCallback and RegisterFalseCallback Functions
 
-- Accept a callback and options, and call the subscribe supplying the correct callbacks array to push our subscription onto.
+- Accept a callback and options, and call the subscribe supplying the correct callbacks array to push the subscription onto.
 
 Sounds easy enough right?
 
@@ -106,13 +106,13 @@ const registerFalseCallback = (callback: Callback, options = { once: false }) =>
 }
 ```
 
-Awesome, almost there! All I'm doing here is pushing our callbacks into the relevant callbacks array. Our register function also returns a handy function that will allow it's callers to unsubscribe from events. Next up, watching reactive changes on our `booleanValue` variable, so we can trigger the correct callbacks!
+Awesome, almost there! All I'm doing here is pushing the callbacks into the relevant callbacks array. The register function also returns a handy function that will allow it's callers to unsubscribe from events. Next up, watching reactive changes on the `booleanValue` variable, so I can trigger the correct callbacks!
 
-## Watching Reactive Changes and Triggering Our Callbacks
+## Watching Reactive Changes and Triggering The Callbacks
 
-Vue makes it really simple to watch updates on our `booleanValue` variable. We'll use the `watchEffect` hook from the Reactivity Api. WatchEffect accepts a function to call whenever one of its dependencies changes. Read more about it [here](https://vuejs.org/api/reactivity-core.html#watcheffect).
+Vue makes it really simple to watch updates on the `booleanValue` variable. I'll use the `watchEffect` hook from the Reactivity Api. WatchEffect accepts a function to call whenever one of its dependencies changes. Read more about it [here](https://vuejs.org/api/reactivity-core.html#watcheffect).
 
-Our goal here is to watch for changes on our `booleanValue` variable, and trigger the correct callbacks upon these changes. Let's create a `triggerCallbacks` function to handle triggering callbacks.
+The goal here is to watch for changes on the `booleanValue` variable, and trigger the correct callbacks upon these changes. Let's create a `triggerCallbacks` function to handle triggering callbacks.
 
 #### TriggerCallbacks
 
@@ -133,7 +133,7 @@ const triggerCallbacks = (value: boolean, callbacks: Subscription[]) => {
 }
 ```
 
-Awesome! Now I only need to watch for changes on the `booleanValue` variable and call this `triggerCallbacks` function. I'll check the value of `booleanValue` to set which callbacks array we'll be triggering. I'll also use the `unmounted` hook to cleanup our callback arrays when a component gets unmounted.
+Awesome! Now I only need to watch for changes on the `booleanValue` variable and call this `triggerCallbacks` function. I'll check the value of `booleanValue` to set which callbacks array we'll be triggering. I'll also use the `unmounted` hook to cleanup the callback arrays when a component gets unmounted.
 
 ```javascript
 watchEffect(() => {
