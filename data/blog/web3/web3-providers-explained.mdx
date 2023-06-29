@@ -1,0 +1,71 @@
+---
+title: 'Building Blocks: A Primer For Assembling a Web3 Toolkit'
+date: 2023-06-02
+tags: ['Blockchain', 'Web3', 'Web Development', 'Building Blocks']
+summary: "Let's discuss what a web3 provider is and why they're necessary for interacting with the blockchain. This article serves as a primer to an upcoming series for building a Web3 toolset with Vue3."
+---
+
+<ImageCentered
+  width="500"
+  alt="network image"
+  src="https://images.unsplash.com/photo-1639322537138-5e513100b36e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2832&q=80"
+/>
+
+Over the past year or so, I've been fortunate enough to work on a variety of projects in the web3 space. Taking the first step was both thrilling and intimidating so I'm hoping to make the learning process easier for anyone just getting started.  You'll learn about the primary components of a web3 application so we can jump into building our own Vue.js toolkit  in future article. I mean if I can do it, anyone can! Let's dive in!
+
+<TOCInline asDisclosure toc={props.toc} toHeading={2} />
+
+## The Ethereum Network 
+
+The Ethereum blockchain is a global, decentralized network of computers or "nodes" that validate and record transactions. Each node in the Ethereum network holds a complete copy of the blockchain's history, contributing to the network's resilience and security. This decentralization means there's no central authority or single point of failure. Instead, power and control are distributed among all participating nodes, reinforcing the principles of transparency and mutual trust.
+
+## What are Web3 Providers?
+
+Web3 providers serve as the crucial bridge between this decentralized network and our applications. They connect our local environment with the Ethereum network by communicating with these nodes. Using web3 providers, we can read from the blockchain, write new transactions, and even deploy smart contracts. Whether you're using a browser provider like [MetaMask](https://metamask.io/) or a JSON RPC provider like [Alchemy](https://www.alchemy.com/), you're leveraging these providers to interact with the Ethereum nodes, allowing you to tap into the potential of this decentralized network.
+
+Web3 providers are foundational to the operation of decentralized applications (dApps) and act as the bridge that connects us to the blockchain. They allow us to interact with the Ethereum network and smart contracts in a seamless and efficient way. Web3 providers are akin to an API in web2 applications, allowing us to connect to remote resources, handle requests, and retrieve data.
+
+In the blockchain world, different types of web3 providers come with varying advantages and serve different needs. For instance, the choice between a BrowserProvider such as MetaMask and JSON RPC provider like Alchemy or Infura can be largely influenced by the nature of the operations that your application performs.
+
+Now that you know what a Web3 provider is, let's discuss the distinction between browser providers like MetaMask and JSON RPC providers like Alchemy.
+
+## Browser Providers
+
+
+A browser provider, like MetaMask, is a bridge between a browser and the Ethereum blockchain. It provides a user-friendly interface to interact with the blockchain right from your browser. 
+
+MetaMask injects a global API into the websites visited by the user, allowing those sites to interact with the Ethereum blockchain. It can manage users' keys, allowing them to sign transactions or messages, thus enabling them to interact with smart contracts on the Ethereum blockchain securely and easily. 
+
+This makes browser providers a key player in making blockchain accessible and easy to use for many web users.
+
+>Browser providers like MetaMask are most commonly used for transferring Ether and ERC-20 tokens, interacting with decentralized applications (DApps), and signing transactions directly in the browser.
+
+## JSON RPC Providers
+
+A JSON RPC (Remote Procedure Call) provider, on the other hand, is a more general-purpose tool for interacting with Ethereum. It enables developers to perform a wide array of tasks, including both read and write operations, by sending RPC requests over HTTP, WebSocket, or IPC transport layers.
+
+Alchemy, for example, is an Ethereum node service that provides a JSON RPC API. It can process these RPC requests and return the results. This makes JSON RPC providers like Alchemy very flexible and powerful for a variety of tasks, including bulk data processing, complex querying, and more. 
+
+However, unlike a browser provider, a JSON RPC provider doesn't manage user keys or provide a user interface. Its primary purpose is to handle raw data interaction with the Ethereum network. It provides an interface to the Ethereum blockchain but leaves the management of keys, wallets, and user interfaces to other software.
+
+>Alchemy's JSON RPC provider allows developers to access the Ethereum blockchain's full breadth and depth, making it an invaluable tool for complex applications like NFT marketplaces.
+
+## Choosing A Provider
+
+Both of these tools play essential roles in the Ethereum ecosystem, serving different needs and use cases.
+
+This division of responsibilities between BrowserProviders and remote providers is not set in stone and can sometimes overlap. Some dApps choose to use a combination of both, leveraging BrowserProviders for secure user transactions and remote providers for quick and efficient read operations. Your choice of a web3 provider should be driven by the specific needs and expectations of your application and its end-users. By understanding the unique characteristics of each type of provider, you can make an informed decision that best suits your project and optimizes the blockchain experience for your users.
+
+## Next Steps
+
+Okay, so that was a bit of a primer to getting started in the web3 space. Every dapp needs to connect to the Ethereum network and without providers connecting to it would be a significantly complex task.
+
+In an upcoming article, we'll roll up our sleeves and start to create a web3 composable toolkit with Vue3. Looking forward to it!
+
+<ImageCentered
+  width="300"
+  alt="network image"
+  src="https://media0.giphy.com/media/7fLvK10wH1Mpa/giphy.gif?cid=ecf05e47eglt2l7e94m0heabikpjdd7re8faok31g9a1xf7v&ep=v1_gifs_search&rid=giphy.gif&ct=g"
+/>
+
+<BlogNewsletterForm title="Enjoyed this Article? Sign up for my newsletter already!" />
