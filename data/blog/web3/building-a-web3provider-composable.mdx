@@ -1,0 +1,284 @@
+---
+title: 'Web3 Building Blocks: Building a Web3 Provider Composable'
+date: 2023-06-07
+tags: ['Blockchain', 'Web3', 'MetaMask', 'Alchemy','Building Blocks']
+summary: "Let's create a Vue3 composable that detects and establishes a secure connection with an Ethereum provider, paving the way for us to interact with the Ethereum network and lay the groundwork for future Web3 applications."
+---
+
+## Overview
+In a recent article, I highlighted the necessity of web3 providers when constructing a web3 application. Now that we comprehend the necessities, let's move forward to start building our web3 toolkit. Our first step will be to establish a connection to a provider. Let's get to it!
+
+<ImageCentered
+  width="100"
+  alt="Picard happy"
+  src="https://64.media.tumblr.com/30a7a10a3c3d826d4dc0685cd65d2dd8/tumblr_mtlnhdSMlz1r86b9lo2_250.gifv"
+/>
+
+<TOCInline asDisclosure toc={props.toc} exclude="Overview" toHeading={2} />
+
+## Requirements
+Let's first state the intention of this composable in plain english, to help guide us along during our build.
+
+>This composable seeks to establish a connection with a browser provider (e.g. Metamask) and a JSON RPC provider (Alchemy). In the event that no provider is detected, an error message should appear to notify us accordingly. We should also be able to subscribe to the `providerConnected` event, which allows us to execute certain logic once a connection has been successfully established. It should also notify us of the current state of our provider connection (pending, connected, or disconnected).
+
+Note here that we're attempting to connect to two providers. We'll be using Metamask to facilitate transactions through the browser, and Alchemy to facilitate reading data from contracts (in a later article). In a real-world dapp, this is pretty common, as most dapps will require some sort of wallet interaction on the user's part.
+With that said, let's think about our composable's function signature given our requirements and how we'd expect to use it.
+```js
+return {
+  onProviderConnected, // subscribe to the connected event
+  getProviders, // a fn to retrieve our providers
+  error, // an error msg to display if our browser provider doesn't connect,
+  pending, // a boolean indicating if the connection is pending
+  connected, // a boolean indicating if the connection is connected
+}
+```
+
+## Dependencies
+We'll need to install two external dependencies before we get started.
+- [ Ethers.js ](https://docs.ethers.org/v6/) is an indispensable tool in our toolkit, serving as a compact yet powerful JavaScript library designed specifically for Ethereum blockchain interactions. It streamlines the process of creating, signing, and sending transactions on the Ethereum blockchain, hiding the inherent complexities of direct blockchain interaction. In our journey to create a Vue3 composable, we'll leverage ethers.js for its ability to establish reliable and secure connections with a web3 browser provider and a JSON-RPC provider like Alchemy, simplifying our development process considerably.
+- [ Metamask's detect-provider ](https://docs.metamask.io/wallet/get-started/detect-metamask/) package allows us to to do exactly that. If a browser doesn't have web3 capabilities, we'll be able to display a nice error message instead of our app crashing due to a provider not being available.
+```shell
+npm install ethers @metamask/detect-provider
+```
+
+## Helpers and Utils
+
+I'm also going to be using a composable called `useToggleEvents` that I detailed the creation of in [ another article ](/blog/vue-composables/use-toggle-events/creating-a-use-toggle-events-composable). This composable allows us to subscribe to changes of a boolean value, triggering our callbacks when the boolean value changes. Check out the article [here](https://www.hobbsco.de/blog/vue-composables/use-toggle-events/creating-a-use-toggle-events-composable) or the docs [here](https://vue.hobbsco.de/composables/use-toggle-events/usetoggle-usage).
+
+## Let's Get Busy!
+
+To begin, we're going to create a composable the retrieves details about the current network we're connected to. Alchemy requires an API key to connect to it's API, and those API keys are unique for every network you want to support. You'll notice I've set these keys in my .env file. You'll want to replace these with your actual keys.
+
+This composable will have one task: to return the network details of the current network we're connected to. This will ensure our AlchemyProvider will be connected to the same network as our BrowserProvider. This will come in handy when we start deploying smart contracts to a test-net like Goerli or Sepolia. We'll want to be able to easily switch between networks to make testing nice and fast. I like to store the etherscan URL for each network as well, which comes in helpful when we want to provide our users with links to view their transactions.
+
+```typescript:useNetwork.ts showLineNumbers
+import { reactive } from 'vue'
+
+interface Network {
+  chainId?: string | null
+  name?: string | null
+  apiKey?: string | null
+  etherscanURL?: string | null
+}
+
+interface NetworkDetail {
+  name: string
+  apiKeys: { [key: string]: string }
+  etherscanURL: string
+}
+
+interface NetworkMap {
+  [key: string]: NetworkDetail
+}
+
+export const networkMap: NetworkMap = {
+  1: {
+    name: 'homestead',
+    apiKeys: { alchemy: import.meta.env.VITE_ALCHEMY_API_KEY_HOMESTEAD },
+    etherscanURL: 'https://etherscan.io/tx/'
+  },
+  5: {
+    name: 'goerli',
+    apiKeys: { alchemy: import.meta.env.VITE_ALCHEMY_API_KEY_GOERLI },
+    etherscanURL: 'https://goerli.etherscan.io/tx/'
+  },
+  11155111: {
+    name: 'sepolia',
+    apiKeys: { alchemy: import.meta.env.VITE_ALCHEMY_API_KEY_GOERLI },
+    etherscanURL: 'https://sepolia.etherscan.io/tx/'
+  }
+}
+
+const network: Network = reactive({
+  chainId: null,
+  name: null,
+  apiKey: null,
+  etherscanURL: null
+})
+
+export const useNetwork = () => {
+  const listenForNetworkChanges = () => {
+    window.ethereum.on('chainChanged', () => {
+      window.location.reload()
+    })
+  }
+
+  const getNetwork = async () => {
+    if (window.ethereum) {
+      const chainId = window.ethereum.networkVersion
+
+      const { name, apiKeys, etherscanURL } = networkMap[chainId]
+
+      network.chainId = chainId
+      network.name = name
+      network.etherscanURL = etherscanURL
+      network.apiKey = apiKeys.alchemy
+
+      return { ...networkMap[chainId] }
+    }
+  }
+
+  if (window.ethereum) {
+    listenForNetworkChanges()
+  }
+
+  return { getNetwork, network }
+}
+```
+
+Let's discuss the two main functions of useNetwork: `listenForNetworkChanges` and `getNetwork`.
+- `listenForNetworkChanges`: Monitors for changes in the connected Ethereum network, reloading the page on network switch.
+- `getNetwork`: Asynchronously retrieves and updates the current active Ethereum network details if an Ethereum-compatible wallet is connected.
+- On execution, the composable sets up a listener for network changes and returns the getNetwork function along with the reactive network object. This enables reactive interaction and state management of the active Ethereum network within our Vue3 application.
+
+## The Web3Provider Composable
+Its time! Let's get connected to the ethereum network. Here's our `useWeb3provider` composable in its entirety:
+
+```typescript:useWeb3Provider.ts
+import detectProvider from '@metamask/detect-provider'
+import { ref } from 'vue'
+import { ethers } from 'ethers'
+import type { BrowserProvider, AlchemyProvider } from 'ethers/types'
+
+import { useToggleEvents } from '@/composables/useToggleEvents'
+import { useNetwork } from '@/composables/useNetwork'
+
+export function useWeb3Provider() {
+  const [onProviderConnected, ,toggleProviderConnected, connected] = useToggleEvents()
+
+  const pending = ref(true)
+  const error = ref('')
+
+  let browserProvider: BrowserProvider | null = null
+  let alchemyProvider: AlchemyProvider | null = null
+
+  const init = async () => {
+    const provider = await detectProvider()
+
+    if (provider) {
+      const { getNetwork } = useNetwork()
+      const networkDetail = await getNetwork()
+
+      browserProvider = new ethers.BrowserProvider(window.ethereum)
+      alchemyProvider = new ethers.AlchemyProvider(
+        networkDetail?.name,
+        networkDetail?.apiKeys.alchemy
+      )
+
+      toggleProviderConnected()
+    } else {
+      error.value = 'Please visit this website from a web3 enabled browser.'
+    }
+
+    pending.value = false
+  }
+
+  function getProviders() {
+    return {
+      alchemyProvider,
+      browserProvider
+    }
+  }
+
+  init()
+
+  return {
+    onProviderConnected,
+    getProviders,
+    error,
+    pending,
+    connected
+  }
+}
+
+```
+
+Let's discuss what's happening here. 
+- It starts with importing necessary dependencies and declaring reactive references and variables for the state of the Ethereum provider connection: `pending`, `connected`, `error`, `browserProvider`, and `alchemyProvider`.
+- It also invokes `useToggleEvents`, which helps manage callbacks that need to be fired when the Ethereum provider connection state toggles. The `onProviderConnected` function will be used to register callbacks that execute when the Ethereum provider gets connected.
+  - By notifying listeners when we're connected, we can avoid running code that relies on being connected to the network if it's not connected, keeping that logic in a single place.
+- The `init` function is the core part of this composable:
+  - It first detects the Ethereum provider in the user's browser using `detectProvider`.
+  - If a provider is found, it retrieves the current network's details using the `useNetwork` composable we created earlier.
+  - Using these network details and the detected provider, it then initializes the `browserProvider` with ethers.js's `BrowserProvider` and the `alchemyProvider` with ethers.js's `AlchemyProvider`.
+  - It then toggles the `connected` state to true using `toggleProviderConnected`.
+  - If no provider is detected, it sets an error message indicating the need for a web3-enabled browser.
+  - Lastly, it sets `pending` to false, signaling the end of the provider detection process.
+- The `getProviders` function simply returns the `alchemyProvider` and `browserProvider`.
+- At the end of the `useWeb3Provider` function, `init` is invoked to kick off the provider detection process.
+- Finally, the `useWeb3Provider` function returns several useful items: the `onProviderConnected` function (for registering callbacks), `getProviders` function (for retrieving initialized providers), and reactive references to `error`, `pending`, and `connected`.
+
+
+## We Have Liftoff
+So, that's the basic flow for connecting to a provider. A few extra tips/thoughts:
+- Always check whether or not the user is browsing with a web3 capable browser, and do it early.
+- Break out any components that rely on a web3 connection into their own components. If web3 connectivity is not available, at least the UI that doesn't rely on it will still be rendered.
+- Right now we're only instanciated the Alchemy provider if a browserProvider (MetaMask) is detected. In the future, we should allow the AlchemyProvider to initialize on it's own, since it doesn't rely on a BrowserProvider being present.
+
+## A Demo
+So after all that, what can we do?? I think we're in need of a demo. Let's create a vue component that request the data about the current block.
+
+```ts
+import { useWeb3Provider } from '@/composables/useWeb3Provider';
+import { ref, type Ref } from 'vue'
+
+const { getProviders, onProviderConnected } = useWeb3Provider()
+
+type Stats = {
+  blockNumber?: null | string
+  gasUsed?: string
+  transactionCount?: string
+  gasLimit?: string
+}
+
+const stats: Ref<Stats> = ref({})
+
+const poll = async () => {
+  const { browserProvider } = getProviders()
+
+  const block = await browserProvider?.getBlock('latest')
+
+  stats.value.blockNumber = block?.number.toLocaleString()
+  stats.value.transactionCount = block?.transactions.length.toString();
+  stats.value.gasUsed = block?.gasUsed.toLocaleString()
+  stats.value.gasLimit = block?.gasLimit.toLocaleString()
+}
+
+onProviderConnected(() => {
+  poll()
+  setInterval(poll, 5000)
+})
+```
+
+Here we're waiting for our provider to be connected before polling the network for detailed information about the most recently mined block. This data will include `transaction count`, `miner address`, `gas limit`, `gas used`, and `block timestamp`. Since we're using a ref here, we can watch the blocks update in real time. With a little UI magic, we've got access to the current block data in our UI!
+I encourage you to check out the [provider documentation](https://docs.ethers.org/v5/api/providers/provider/) to learn more about what provider methods are available, and start experimenting on your own.
+
+<ImageCentered
+  width="500"
+  alt="current block updating gif"
+  src="/static/images/current-block.gif"
+/>
+
+## That's It For Now 
+
+Connecting to an Ethereum provider truly opens a world of opportunities and a treasure trove of network data, right at our fingertips. This connection forms a powerful gateway that allows us to delve into the intricate details of the Ethereum blockchain, effectively tapping into the pulse of the network. By simply connecting to a provider, we gain immediate access to a multitude of real-time information such as the latest transactions, current block details, network congestion, gas prices, and so much more.
+
+This immediate accessibility not only enables us to monitor the current state of the Ethereum network but also provides vast possibilities for future data exploration. We could, for instance, delve deeper into transaction patterns, analyze gas cost trends over time, study the correlation between network activity and cryptocurrency price changes, or even predict future network congestion based on historical data. With the power of Ethereum providers, we are given a key to unlock a vast sea of blockchain data, serving as a launchpad for a wide range o,,wf innovative applications and insights.
+
+### Coming Up
+- In our upcoming articles, we will begin to develop our web3 toolkit, including:
+- A higher order component that conditionally renders any component reliant on web3 browser support.
+- A `useWallet` composable to facilitate wallet connections and associated transactions
+- A `useContract` composable to simplify the read/write process with smart-contracts.
+
+## Until Next Time!
+
+<ImageCentered
+  width="500"
+  alt="network image"
+  src="https://64.media.tumblr.com/a47f9f12960f71dfb2e743df2d7029df/51b50c97a27896cf-fd/s500x750/0a3148f071f2a16a658571fbbca8ec96e76cee69.gifv"
+/>
+
+<BlogNewsletterForm title="Enjoyed this Article? Sign Up For My Newsletter Already!" />
+
+

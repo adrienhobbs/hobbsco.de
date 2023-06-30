@@ -7,11 +7,24 @@ import { getAllTags } from 'pliny/utils/contentlayer'
 import { GetStaticProps, InferGetStaticPropsType } from 'next'
 import { allBlogs } from 'contentlayer/generated'
 
+
 export const getStaticProps: GetStaticProps<{ tags: Record<string, number> }> = async () => {
   const tags = await getAllTags(allBlogs)
 
   return { props: { tags } }
 }
+
+interface User {
+    name: string,
+    birthday: number
+  };
+
+  const user:User = {
+      name: 'hi',
+      birthday: 1234 
+    };
+
+console.log(user);
 
 export default function Tags({ tags }: InferGetStaticPropsType<typeof getStaticProps>) {
   const sortedTags = Object.keys(tags).sort((a, b) => tags[b] - tags[a])
