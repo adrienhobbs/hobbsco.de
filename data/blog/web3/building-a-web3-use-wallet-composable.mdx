@@ -1,0 +1,296 @@
+---
+title: 'Web3 Building Blocks: Building A UseWallet Composable'
+date: 2023-07-07
+tags: ['blockchain', 'web3', 'metaMask', 'alchemy','building blocks', 'composables', 'vue.js']
+summary: "Let's create a Vue3 composable that connects to the user's MetaMask account."
+---
+
+## Overview
+In a [prior article](/blog/web3/building-a-web3provider-composable), we delved into creating a composable that connects to a web3 provider. If you haven't explored web3 providers yet, I suggest starting there. Building upon that foundation, this article introduces the useWallet composable, which connects directly to a user's MetaMask account. Such a connection is key, facilitating smooth interactions with decentralized applications and secure on-chain activities. MetaMask stands out as the trusted bridge here, as it's recognized, favored, and trusted by the vast majority of the web3 community. So lets get started! 
+
+<ImageCentered
+  width="300"
+  alt="Worf Excited"
+  src="/static/images/use-wallet/worf-excited.gif"
+/>
+
+<TOCInline asDisclosure toc={props.toc} exclude="Overview" toHeading={2} />
+
+## What Are We Doing Here? 
+Why do we even need to connect to a user's wallet you ask? Well, let's take a look at some of things we can do when connecting to a user's wallet.
+- ***Access to Essential Information:*** Once connected, the application can retrieve the user's public Ethereum address. This address is vital for displaying account-specific data like transaction history, token balances, and more. 
+- ***Initiating Transactions:*** With a connection to MetaMask, the application can facilitate various on-chain transactions on behalf of the user. This includes sending and receiving ether, interacting with smart contracts, minting tokens, and participating in decentralized finance (DeFi) protocols, among other activities.
+- ***User Authentication:*** Many decentralized applications use the Ethereum address as a form of identity. By signing messages or transactions, users can prove ownership of their address, which serves as a unique identifier, enabling them to log in and interact with services without the traditional username-password mechanism.
+- ***Interactions with Smart Contracts:*** Beyond simple transfers, connecting to a user's MetaMask wallet allows applications to invoke functions on Ethereum smart contracts. This means users can, for instance, vote in a decentralized organization, buy or sell assets on decentralized exchanges, or interact with any DApp that requires smart contract functions.
+- ***Ensuring Trust:*** When users grant permission for an application to connect to their MetaMask, they're essentially expressing a level of trust. MetaMask manages transaction confirmations, ensuring users always have the final say on any on-chain action. This establishes a secure environment where users maintain full control while apps facilitate the desired activities.
+
+### What We're Building
+
+>This composable will allow a user to connect their MetaMask Wallet to our application. Once connected, we'll have access to the user's ethereum address, which we'll use to sign a message.
+
+Let's think about what functionality & variables our composable should expose:
+
+```js
+  return {
+    onConnected, // allow user to get notified when the wallet connects
+    onDisconnected, // allow user to get notified when wallet disconnects
+    connect // function to attempt connection,
+    error // error if connection fails,
+    ...toRefs(wallet), // wallet address and ensName
+    prettyAddress, // truncated version of wallet address 
+    getSigner, // function to an ethers signer for the wallet. used for faciliating transactions
+    init // a boolean indicating whether or not we've attempted to connect
+  }
+```
+
+## Helpers and Utils
+
+I'll be using a  composable called `useToggleEvents` that I detailed the creation of in another article. This composable allows us to subscribe to changes of a boolean value, triggering our callbacks when the boolean value changes. Check out the article [here](https://www.hobbsco.de/blog/vue-composables/use-toggle-events/creating-a-use-toggle-events-composable) or the docs [here](https://vue.hobbsco.de/composables/use-toggle-events/usetoggle-usage).
+
+I'll also use another composable called `useWeb3Provider` that I detailed the creation of in [another article](/blog/vue-composables/use-toggle-events/creating-a-use-toggle-events-composable). This will allow us to ensure we're connected to a provider before we attempt to connect to a wallet.
+
+## Let's get busy!
+
+To begin, let's look at a flow chart detailing the process of connecting to a wallet.
+
+<ImageCentered
+  alt="Attempt Connection FlowChart"
+  src="/static/images/use-wallet/attempt-connection.png"
+/>
+
+When our provider connects, `initWallet` will be called and we'll check to see if the user has previously connected their wallet to our app.
+If they have, we'll set our wallet's address to the connected account and the user won't have manually connect every time they refresh the page.
+On line 3 we send an `eth_accounts` request using our browserProvider, which returns an array currently connected accounts. 
+If there aren't any accounts (the accounts array will be empty) we'll call `listenForEvents()` and listen for the `accountsChanged` event. 
+This event fires whenever an account is connected or disconnected. 
+We can utilize this to set our wallet address when our user clicks on a connect wallet button.
+
+
+
+```js {3,6,14-21} showLineNumbers
+  async function initWallet() {
+    const { browserProvider } = getProviders()
+    const accts = await browserProvider?.send('eth_accounts', [])
+
+    if (accts?.length) {
+      setAccount(accts[0])
+    }
+
+    listenToEvents()
+
+    init.value = true
+  }
+
+  function listenToEvents() {
+    window.ethereum.on('accountsChanged', async (accts: Array<string>) => {
+      if (accts.length) {
+        setAccount(accts[0])
+      } else {
+        setAccount(null)
+      }
+    })
+
+    window.ethereum.on('disconnected', () => {
+      setAccount(null)
+    })
+  }
+
+  onProviderConnected(() => {
+    initWallet()
+  })
+
+```
+
+Next up, we'll create a connect function, that we'll call when a user clicks the "Connect Wallet" button. Unlike the `eth_accounts` method we used earlier to scan for pre-connected accounts, here we utilize `eth_requestAccounts`. This will actively prompt the user to link their MetaMask account, whereas `eth_accounts` merely returns an array of existing connections.
+
+```js {6, 14-21} showLineNumbers
+  async function connect() {
+    const { browserProvider } = getProviders()
+    if (!wallet.address && browserProvider) {
+      try {
+        const accts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        })
+
+        console.log(accts) // ['0xEFA...']
+        setAccount(accts[0])
+        error.value = ''
+      } catch (err: any) {
+        error.value = err.message
+        console.log(err)
+      }
+    }
+  }
+```
+
+### Summary
+That's the core functionality summed up. I'll share the composable in it's entirety soon, but let's sum up what we've done so far:
+
+1. Wait for a provider to become available (in this case our BrowserProvider from ethers.js)
+2. Check for any connected accounts and use the most recently connected account if it exists
+3. Create a connect function to prompt the user to connect with MetaMask
+
+Here's the full composable. There's a bit more functionality here, like checking if the currently connected account is associated
+with a ENS address, and some better error handling, but the core functionality remains the same.
+
+```ts
+import { watchEffect, ref, reactive, toRefs, computed } from 'vue'
+import { showErrorToast } from '@/utils/ToastComponents'
+
+import { useWeb3Provider } from '@/composables/useWeb3Provider'
+import { useToggleEvents } from '@/composables/useToggleEvents'
+import { useENS } from '@/composables/useENS'
+
+interface Wallet {
+  address: string | null
+  ensName?: string | null
+}
+
+export function useWallet() {
+  const { onProviderConnected, getProviders } = useWeb3Provider()
+
+  const [onConnected, onDisconnected, , walletConnected] = useToggleEvents()
+
+  const { lookupAddress } = useENS()
+
+  const wallet: Wallet = reactive({ address: null, ensName: null })
+  const listeningToEvents = ref(false)
+  const error = ref('')
+  const init = ref(false)
+
+  function listenToEvents() {
+    if (listeningToEvents.value) {
+      return
+    }
+
+    window.ethereum.on('accountsChanged', async (accts: Array<string>) => {
+      if (accts.length) {
+        setAccount(accts[0])
+      } else {
+        setAccount(null)
+      }
+    })
+
+    window.ethereum.on('disconnected', () => {
+      console.log('disconnected')
+      setAccount(null)
+    })
+
+    listeningToEvents.value = true
+  }
+
+  function setAccount(address: string | null) {
+    wallet.address = address ? address.toLocaleLowerCase() : address
+
+    if (address) {
+      walletConnected.value = true
+    } else if (!address && walletConnected.value) {
+      walletConnected.value = false
+    }
+  }
+
+  async function initWallet() {
+    const { browserProvider } = getProviders()
+    const accts = await browserProvider?.send('eth_accounts', [])
+    console.log(accts)
+
+    if (accts?.length) {
+      setAccount(accts[0])
+    }
+
+    listenToEvents()
+
+    init.value = true
+  }
+
+  async function connect() {
+    const { browserProvider } = getProviders()
+    if (!wallet.address && browserProvider) {
+      try {
+        // mention diff between eth.request and .send('eth accounts')
+        const accts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        })
+        console.log(accts)
+        setAccount(accts[0])
+        error.value = ''
+      } catch (err: any) {
+        error.value = err.message
+        showErrorToast(err)
+      }
+    }
+  }
+
+  const prettyAddress = computed(() => {
+    if (wallet.address) {
+      const t = wallet.address.split('')
+      const prefix = t.slice(0, 6).join('')
+      const suffix = t.slice(t.length - 4, t.length).join('')
+      return prefix + '...' + suffix
+    } else {
+      return ''
+    }
+  })
+
+  const getSigner = async () => {
+    if (wallet.address) {
+      const { browserProvider } = getProviders()
+      return await browserProvider?.getSigner()
+    }
+  }
+
+  watchEffect(async () => {
+    if (wallet.address) {
+      wallet.ensName = await lookupAddress(wallet.address)
+    }
+  })
+
+  onProviderConnected(() => {
+    initWallet()
+  })
+
+  return {
+    onConnected,
+    onDisconnected,
+    connect,
+    error,
+    ...toRefs(wallet),
+    prettyAddress,
+    getSigner,
+    init
+  }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Coming Up
+- In our upcoming articles, we will develop mor of our web3 toolkit, including:
+- A higher order component that conditionally renders any component reliant on web3 browser support.
+- A `useContract` composable to simplify the read/write process with smart-contracts.
+- And we'll start writing some smart contracts so we can learn how to connect and interact with them from our front-ends
+
+## Until Next Time!
+
+<ImageCentered
+  alt="Data smirking"
+  src="/static/images/use-wallet/data.gif"
+/>
+
+<BlogNewsletterForm title="Enjoyed this Article? Sign Up For My Newsletter Already!" />
+
+
