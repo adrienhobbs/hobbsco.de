@@ -9,8 +9,15 @@ import Image from './Image'
 import CustomLink from './Link'
 
 const ImageCentered = (props) => (
-  <div className="flex items-center justify-center">
-    <img src={props.src} alt={props.alt} />
+  <div className="flex items-center justify-center ">
+    <Image
+      alt={props.alt}
+      className="rounded-md"
+      height={props.height || 762}
+      src={props.src}
+      width={props.width ?? 762}
+      quality={100}
+    />
   </div>
 )
 
