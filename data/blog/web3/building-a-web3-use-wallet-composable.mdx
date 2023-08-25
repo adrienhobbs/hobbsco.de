@@ -6,10 +6,11 @@ summary: "Let's build upon our last post and create a Vue3 composable that conne
 ---
 
 ## Overview
-In a [prior article](/blog/web3/building-a-web3provider-composable), we delved into creating a composable that connects to a web3 provider. If you haven't explored web3 providers yet, I suggest starting there. Building upon that foundation, this article introduces the useWallet composable, which connects directly to a user's MetaMask account. Such a connection is key, facilitating smooth interactions with decentralized applications and secure on-chain activities. MetaMask stands out as the trusted bridge here, as it's recognized, favored, and trusted by the vast majority of the web3 community. So lets get started! 
+In a [prior article](/blog/web3/building-a-web3provider-composable), we delved into creating a composable that connects to a web3 provider. If you haven't explored web3 providers yet, I suggest starting there. Building upon that foundation, this article introduces the useWallet composable, which connects directly to a user's MetaMask account. Such a connection is key, facilitating smooth interactions with decentralized applications and secure on-chain activities. MetaMask stands out as the trusted bridge here, as it's recognized, favored, and trusted by the vast maority of the web3 community. So lets get started! 
 
 <ImageCentered
-  width="300"
+  width={ 300 }
+  height={227}
   alt="Worf Excited"
   src="/static/images/use-wallet/worf-excited.gif"
 />
@@ -30,7 +31,7 @@ Why do we even need to connect to a user's wallet you ask? Well, let's take a lo
 
 Let's think about what functionality & variables our composable should expose:
 
-```js
+```s
   return {
     onConnected, // allow user to get notified when the wallet connects
     onDisconnected, // allow user to get notified when wallet disconnects
