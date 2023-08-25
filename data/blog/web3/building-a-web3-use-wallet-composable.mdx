@@ -1,8 +1,8 @@
 ---
 title: 'Web3 Building Blocks: Building A UseWallet Composable'
 date: 2023-08-07
-tags: ['blockchain', 'web3', 'metaMask', 'alchemy','building blocks', 'composables', 'vue.js']
-summary: "Let's create a Vue3 composable that connects to the user's MetaMask account."
+tags: ['blockchain', 'web3', 'metaMask', 'alchemy', 'building blocks', 'composables', 'vue.js']
+summary: "Let's build upon our last post and create a Vue3 composable that connects to a user's MetaMask account."
 ---
 
 ## Overview
@@ -49,7 +49,7 @@ I'll be using a  composable called `useToggleEvents` that I detailed the creatio
 
 I'll also use another composable called `useWeb3Provider` that I detailed the creation of in [another article](/blog/vue-composables/use-toggle-events/creating-a-use-toggle-events-composable). This will allow us to ensure we're connected to a provider before we attempt to connect to a wallet.
 
-## Let's get busy!
+## Get To Know The Connect Process
 
 To begin, let's look at a flow chart detailing the process of connecting to a wallet.
 
@@ -64,7 +64,6 @@ On line 3 we send an `eth_accounts` request using our browserProvider, which ret
 If there aren't any accounts (the accounts array will be empty) we'll call `listenForEvents()` and listen for the `accountsChanged` event. 
 This event fires whenever an account is connected or disconnected. 
 We can utilize this to set our wallet address when our user clicks on a connect wallet button.
-
 
 
 ```js {3,6,14-21} showLineNumbers
@@ -101,6 +100,8 @@ We can utilize this to set our wallet address when our user clicks on a connect 
 
 ```
 
+## Let's Connect
+
 Next up, we'll create a connect function, that we'll call when a user clicks the "Connect Wallet" button. Unlike the `eth_accounts` method we used earlier to scan for pre-connected accounts, here we utilize `eth_requestAccounts`. This will actively prompt the user to link their MetaMask account, whereas `eth_accounts` merely returns an array of existing connections.
 
 ```js {6, 14-21} showLineNumbers
@@ -123,7 +124,7 @@ Next up, we'll create a connect function, that we'll call when a user clicks the
   }
 ```
 
-### Summary
+## Summary
 That's the core functionality summed up. I'll share the composable in it's entirety soon, but let's sum up what we've done so far:
 
 1. Wait for a provider to become available (in this case our BrowserProvider from ethers.js)
@@ -132,6 +133,8 @@ That's the core functionality summed up. I'll share the composable in it's entir
 
 Here's the full composable. There's a bit more functionality here, like checking if the currently connected account is associated
 with a ENS address, and some better error handling, but the core functionality remains the same.
+
+## The Composable
 
 ```ts
 import { watchEffect, ref, reactive, toRefs, computed } from 'vue'
@@ -262,7 +265,7 @@ export function useWallet() {
 
 ```
 
-### Putting It To Use
+## Putting It To Use
 
 I'll create a quick Vue component to integrate our `useWallet` composable. Its sole purpose will be to allow the user to
 connect with MetaMask, or to show their wallet address if they're connected.
@@ -302,10 +305,9 @@ const {connect, init, address, ensName, prettyAddress} = useWallet()
 </template>
 ```
 
-### DEMO
+## A GIF Demo
 
-A GIF is worth a thousand lines of code...
-
+A GIF is worth a thousand...
 
 <ImageCentered
   alt="Attempt Connection FlowChart"
