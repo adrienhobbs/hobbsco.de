@@ -7,7 +7,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // You might need to insert additional domains in script-src if you are using external services
 const ContentSecurityPolicy = `
   default-src 'self' vitals.vercel-insights.com;
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' giscus.app vitals.vercel-insights.com;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' giscus.app vitals.vercel-insights.com va.vercel-scripts.com;
   style-src 'self' 'unsafe-inline';
   img-src * blob: data:;
   media-src 'none';
@@ -70,6 +70,18 @@ module.exports = () => {
         {
           protocol: 'https',
           hostname: '64.media.tumblr.com',
+        },
+        {
+          protocol: 'https',
+          hostname: '*.giphy.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'images.unsplash.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'thumbs.gfycat.com',
         },
       ],
     },
