@@ -1,6 +1,6 @@
 ---
 title: 'Web3 Building Blocks: Building A UseWallet Composable'
-date: 2023-07-07
+date: 2023-08-07
 tags: ['blockchain', 'web3', 'metaMask', 'alchemy','building blocks', 'composables', 'vue.js']
 summary: "Let's create a Vue3 composable that connects to the user's MetaMask account."
 ---
@@ -207,7 +207,6 @@ export function useWallet() {
     const { browserProvider } = getProviders()
     if (!wallet.address && browserProvider) {
       try {
-        // mention diff between eth.request and .send('eth accounts')
         const accts = await window.ethereum.request({
           method: 'eth_requestAccounts'
         })
@@ -263,20 +262,55 @@ export function useWallet() {
 
 ```
 
+### Putting It To Use
+
+I'll create a quick Vue component to integrate our `useWallet` composable. Its sole purpose will be to allow the user to
+connect with MetaMask, or to show their wallet address if they're connected.
+
+```ts
+<script setup lang="ts">
+import MetamaskIcon from './IconMetamask.vue'
+
+import { useWallet } from '@/composables/useWallet'
+const {connect, init, address, ensName, prettyAddress} = useWallet()
+
+</script>
+
+<template>
+  <div>
+    <div v-if="init && !address">
+      <div
+        @click="() => connect()"
+        class="group-hover:bg-slate-600/50 transition-colors group-hover:text-white relative flex justify-center cursor-pointer items-center rounded-md bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+        <MetamaskIcon
+          class="h-6 w-6 mr-3 group-hover:-translate-x-1 transition-transform transform-gpu will-change-transform ease-in-out" />
+        <div class="group-hover:translate-x-1 transition-transform transform-gpu will-change-transform ease-in-out">
+          Connect Your Wallet
+        </div>
+      </div>
+    </div>
+    <div v-if="address && init" class="text-white">
+      <div 
+        class="rounded-md inline-flex items-center px-2 py-1 leading-none text-center text-white bg-black border border-white">
+        <div class="w-2 h-2 bg-green-300 rounded-full"></div>
+        <div class="ml-2 font-mono text-sm text-white">
+          {{ ensName || prettyAddress }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+### DEMO
+
+A GIF is worth a thousand lines of code...
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+<ImageCentered
+  alt="Attempt Connection FlowChart"
+  src="/static/images/use-wallet/demo.gif"
+/>
 
 ### Coming Up
 - In our upcoming articles, we will develop mor of our web3 toolkit, including:
